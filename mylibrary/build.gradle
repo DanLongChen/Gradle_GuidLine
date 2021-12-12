@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.library'
+}
+
+android{
+    defaultConfig{
+        compileSdkVersion Integer.parseInt(compile_sdk_version)
+        buildToolsVersion build_tools_versioin
+    }
+    defaultPublishConfig 'debug'
+}
+
+sourceSets{
+    main{
+        //在这里对sourceSet进行配置
+        java{
+            srcDir 'src/vip/java'
+        }
+        resources{
+            srcDir 'src/vip/resources'
+        }
+    }
+}
+
+
+
+task sourceSetTask{
+    sourceSets.all {
+        println "name ${name}"
+    }
+}
+
+dependencies {
+    //简写的方式
+    compile 'com.squareup.okhttp3:okhttp:3.0.1'
+    testImplementation 'junit:junit:4.+'
+}
+

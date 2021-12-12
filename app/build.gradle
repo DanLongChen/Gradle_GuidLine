@@ -1,0 +1,164 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdkVersion 30
+
+    defaultConfig {
+        applicationId "how.are.you"
+        minSdkVersion 21
+        targetSdkVersion 30
+        versionCode rootProject.ext.appVersionCode
+        versionName rootProject.ext.appVersionName
+
+        testApplicationId "my name is test"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        flavorDimensions "default"
+    }
+
+    productFlavors{
+        google{
+            //分别表示（类型，名称，数值）
+            buildConfigField 'String','WEB_URL','"http://google.com"'
+            resValue 'string','channel_tips','google渠道欢迎你'
+        }
+
+        baidu{
+            buildConfigField 'String','WEB_URL','"http://baidu.com"'
+            resValue 'string','channel_tips','baidu渠道欢迎你'
+        }
+    }
+    productFlavors.all{
+        flavor->manifestPlaceholders.put("UMENG_CHANNEL",name)
+    }
+
+//    useLibrary 'org.apach.http.legacy'
+
+    Properties properties = new Properties();
+    InputStream inputStream = project.rootProject.file('local.properties').newDataInputStream()
+    properties.load(inputStream)
+    def keyStore = file(properties.getProperty('keyStoreFile'))
+    def keyStorePass = properties.getProperty('keyStorePass')
+    def key_alias = properties.getProperty('keyAlias')
+    def key_pass = properties.getProperty('keyPass')
+
+    signingConfigs{
+        debug{
+            storeFile keyStore
+            storePassword keyStorePass
+            keyAlias key_alias
+            keyPassword key_pass
+        }
+
+        release{
+            storeFile keyStore
+            storePassword keyStorePass
+            keyAlias key_alias
+            keyPassword key_pass
+        }
+
+        mock{
+            storeFile keyStore
+            storePassword keyStorePass
+            keyAlias key_alias
+            keyPassword key_pass
+        }
+    }
+
+    buildTypes {
+        //TODO Android已经内置relaese和debug两种构建类型，也可以自己添加类型（signingConfigs也是类似）
+        release {
+            //基于applicationId的后缀，如how.are.you.release
+            applicationIdSuffix 'release'
+            //是否生成一个可供调试的apk
+            debuggable false
+            //是否生成一个可调试jni代码的apk
+            jniDebuggable false
+            //是否启动混淆
+            minifyEnabled false
+            //是否启动自动拆分多个Dex的功能，超过65535个方法的时候会进行拆分处理
+            multiDexEnabled false
+            //是否自动清除未使用的资源
+            shrinkResources false
+            //是否开启优化apk，可以提高系统和应用的运行效率，更快读写apk中的资源，降低内存使用
+            zipAlignEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keyStore.exists()) {
+                //配置签名
+                signingConfig signingConfigs.release
+            }
+        }
+
+        debug{
+            applicationIdSuffix 'debug'
+            debuggable true
+            buildConfigField 'String','URL','"http://www.test.com"'
+            resValue 'string','channel_tips','debug渠道欢迎你'
+        }
+
+        mock{
+
+        }
+    }
+    compileOptions {
+        encoding = 'utf-8'
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    adbOptions{
+        //避免在调试的时候遇到CommandRejectException
+        timeOutInMs = 5*1000
+        //传输编译选项
+        installOptions '-r -s'
+    }
+
+    dexOptions{
+        //是否启用增量模式，增量模式虽然速度快一些，但是目前还有很多限制，可能会不工作
+        incremental true
+        //执行dx命令的时候为其分配的最大堆内存，可以分配尽量高，前提是你的计算机有这么多内存
+        javaMaxHeapSize '4g'
+        //是否开启jumboMode，有时我们的程序工程比较大，代码多（函数个数超过65535），这个时候需要
+        //强制开启jumboMode才能编译成功
+        jumboMode true
+        //是否执行dex Libraries库工程，开启后可以提高增量构建的速度，不过可能影响clean构建的速度
+        preDexLibraries true
+        //运行dx命令所使用的的线程数
+        threadCount 4
+    }
+
+    // 定义编译生成的apk名格式
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def newName
+
+            if ('true' == IS_JENKINS) {
+                println("jenkins build ==> $BUILD_TIME")
+                newName = "$APK_NAME-v$VERSION_NAME-$BUILD_TIME-${variant.buildType.name}-unsigned.apk"
+            } else {
+                if ('debug' == variant.buildType.name) {
+                    newName = "$APK_NAME-v${rootProject.android.versionName}-${rootProject.android.versionCode}-debug.apk"
+                } else {
+                    newName  = "$APK_NAME-v${rootProject.android.versionName}-${rootProject.android.versionCode}-${variant.buildType.name}.apk"
+                }
+            }
+
+            output.outputFileName newName
+        }
+
+    }
+}
+
+dependencies {
+    implementation fileTree(dir:'libs',include:'*.jar')
+    implementation project(':mylibrary')
+//    implementation files('lib/a.jar')
+
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.2.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+}

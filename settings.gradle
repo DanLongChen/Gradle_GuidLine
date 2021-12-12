@@ -1,0 +1,4 @@
+rootProject.name = "Gradle_GuideLine"
+include ':app'
+include ':mylibrary'
+project(':mylibrary').projectDir = new File(rootDir,'mylibrary')
